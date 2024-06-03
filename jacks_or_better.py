@@ -110,6 +110,33 @@ def check_hand(player_hand):
     wager_multiplier = dict_of_payouts[hand_type]
     return (hand_type,wager_multiplier)
 
+def calculate_ev(hand, deck):
+    """Calculates the expected value of a given hand by simulating all possible draws."""
+
+    original_hand = hand.copy()
+    original_deck = deck.card_list.copy()
+
+    total_winnings = 0
+    num_simulations = 0
+
+    # Iterate over all possible combinations of discards (holding 0 to 5 cards)
+    for num_discards in range(6):
+        for discard_combo in combinations(range(5), num_discards):
+            hand = original_hand.copy()
+            deck.card_list = original_deck.copy()
+
+            # Discard and draw new cards
+            for discard_idx in discard_combo:
+                hand[discard_idx] = deck.deal_card(1)[0]
+
+            # Check hand value and record winnings
+            hand_type, wager_multiplier = check_hand(hand)
+            total_winnings += wager_multiplier
+
+            num_simulations += 1
+
+    return total_winnings / num_simulations
+
 def print_payouts():
     print "*** Payouts - Times Initial Bet ***"
     payouts_list = sorted(dict_of_payouts.values())[::-1]
@@ -162,6 +189,10 @@ def Main() :
 
         # Print Player Hand
         print_hand(player.hand)
+	    
+        # After the initial hand is dealt, calculate and print the EV
+        ev = calculate_ev(player.hand, deck)
+        print(f"\nExpected value of this hand: {ev}")
 
         # Get Hold List From Player
         hold_number = 0
