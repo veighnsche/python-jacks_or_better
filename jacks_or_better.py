@@ -110,32 +110,29 @@ def check_hand(player_hand):
     wager_multiplier = dict_of_payouts[hand_type]
     return (hand_type,wager_multiplier)
 
-def calculate_ev(hand, deck):
-    """Calculates the expected value of a given hand by simulating all possible draws."""
+def calculate_ev(player_hand):
+    """Calculates the expected value for all possible card combinations."""
+    all_cards = deck.card_list + player_hand
+    ev_results = {}
 
-    original_hand = hand.copy()
-    original_deck = deck.card_list.copy()
+    # Iterate over all possible 2-card combinations from the remaining cards
+    for draw_cards in combinations(deck.card_list, 5 - len(player_hand)):
+        potential_hand = player_hand + list(draw_cards)
+        hand_type, wager_multiplier = check_hand(potential_hand)
+        expected_winnings = wager_multiplier - 1  # Subtract the initial bet
 
-    total_winnings = 0
-    num_simulations = 0
+        # If the combination isn't already in the dictionary, add it
+        if tuple(sorted(draw_cards)) not in ev_results:
+            ev_results[tuple(sorted(draw_cards))] = expected_winnings
+        else:
+            # Average the existing EV with the new one
+            ev_results[tuple(sorted(draw_cards))] = (
+                ev_results[tuple(sorted(draw_cards))] + expected_winnings
+            ) / 2
 
-    # Iterate over all possible combinations of discards (holding 0 to 5 cards)
-    for num_discards in range(6):
-        for discard_combo in combinations(range(5), num_discards):
-            hand = original_hand.copy()
-            deck.card_list = original_deck.copy()
-
-            # Discard and draw new cards
-            for discard_idx in discard_combo:
-                hand[discard_idx] = deck.deal_card(1)[0]
-
-            # Check hand value and record winnings
-            hand_type, wager_multiplier = check_hand(hand)
-            total_winnings += wager_multiplier
-
-            num_simulations += 1
-
-    return total_winnings / num_simulations
+    # Sort by expected value in descending order
+    sorted_results = sorted(ev_results.items(), key=lambda x: x[1], reverse=True)
+    return sorted_results
 
 def print_payouts():
     print "*** Payouts - Times Initial Bet ***"
@@ -189,10 +186,13 @@ def Main() :
 
         # Print Player Hand
         print_hand(player.hand)
-	    
-        # After the initial hand is dealt, calculate and print the EV
-        ev = calculate_ev(player.hand, deck)
-        print(f"\nExpected value of this hand: {ev}")
+
+    	# Before getting hold list, calculate and display EV
+    	ev_results = calculate_ev(player.hand)
+    	print("\nPossible draws and their Expected Value (EV):")
+    	for draw, ev in ev_results[:5]:  # Show top 5 possibilities
+            print(f"Draw: {[list_of_cards[c[0]] + c[1] for c in draw]}, EV: {ev:.2f}")
+
 
         # Get Hold List From Player
         hold_number = 0
